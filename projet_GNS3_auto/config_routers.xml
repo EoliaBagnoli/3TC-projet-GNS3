@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <network bgp="True">
-    <as number="1" rip="True" ospf="False" loopback_subnet="2001:192:168::/48" loopback_mask="48" ipv6_address_subnet="2001:192:168::" ipv6_address_mask="64">
+    <as number="1" rip="True" ospf="False" loopback_subnet="2001:192:168::/48" ipv6_address_subnet="2001:192:168::/64">
         <router name="R11" num ="1">
             <neighbor name="R12" int="G 1"/>
             <neighbor name="R13" int="G 2"/>
@@ -31,15 +31,15 @@
         <router name="R16" num ="6">
             <neighbor name="R14" int="G 1"/>
             <neighbor name="R15" int="F 0"/>
-            <neighbor name="R26" int="G 2"/>
+            <neighbor name="R26" int="G 2" common_subnet="2003:192:168::/64" remote_subnet="2002:192:168::/64"/>
         </router>
         <router name="R17" num ="7">
             <neighbor name="R14" int="F 0"/>
             <neighbor name="R15" int="G 1"/>
-            <neighbor name="R27" int="G 2"/>
+            <neighbor name="R27" int="G 2" common_subnet="2004:192:168::/64" remote_subnet="2002:192:168::/64"/>
         </router>
     </as>
-    <as number="2" rip="False" ospf="True">
+    <as number="2" rip="False" ospf="True" loopback_subnet="2002:192:168::/48" ipv6_address_subnet="2002:192:168::/64">
         <router name="R21" num ="14">
             <neighbor name="R22" int="G 1"/>
             <neighbor name="R23" int="G 2"/>
@@ -69,12 +69,12 @@
         <router name="R26" num ="8">
             <neighbor name="R24" int="G 1"/>
             <neighbor name="R25" int="F 0"/>
-            <neighbor name="R16" int="G 2"/>
+            <neighbor name="R16" int="G 2" common_subnet="2003:192:168::/64" remote_subnet="2001:192:168::/64"/>
         </router>
         <router name="R27" num ="9">
             <neighbor name="R24" int="F 0"/>
             <neighbor name="R25" int="G 1"/>
-            <neighbor name="R17" int="G 2"/>
+            <neighbor name="R17" int="G 2" common_subnet="2004:192:168::/64" remote_subnet="2001:192:168::/64"/>
         </router>
     </as>
 </network>

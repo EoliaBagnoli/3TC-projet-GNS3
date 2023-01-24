@@ -17,16 +17,13 @@ for as_elem in root.findall("as"):
     as_number = int(as_elem.attrib["number"])
     rip_enable = eval(as_elem.attrib["rip"])
     ospf_enable = eval(as_elem.attrib["ospf"])
-    ipv6_subnet = as_elem.attrib["ipv6_address_subnet"]
-    ipv6_subnet_tab = ipv6_subnet.split(":")
-    loopback_subnet = as_elem.attrib["loopback_subnet"]
-    ipv6_prefix = ""
+    ipv6_subnet_tab = as_elem.attrib["ipv6_address_subnet"].split("/")
+    ipv6_mask = int(ipv6_subnet_tab[1])
+    ipv6_subnet = (ipv6_subnet_tab[0].split("::"))[0]
+    loopback_subnet = as_elem.attrib["loopback_subnet"].split("/")
+    loopback_subnet = ipv6_subnet_tab[0]
 
-    for i in range(0, int(as_elem.attrib["ipv6_mask"]/16)+1) : 
-        ipv6_prefix = ipv6_prefix + ipv6_subnet_tab[i] + ":"
-
-    print(ipv6_prefix)
-
+    print(ipv6_subnet)
     print(f"rip : {rip_enable}")
     print(f"ospf : {ospf_enable}")
     #liste sans doublons de tous les réseaux qui existent dans l'as
@@ -86,20 +83,21 @@ for as_elem in root.findall("as"):
             if neighbor_as_number == as_number : 
                 if neighbor_id>router_id : 
                     set_networks_as.add(f"{router_id}{neighbor_id}")
-                    config_lines.append(f"ipv6 address {ipv6_prefix}{router_id}{neighbor_id}::{router_id}/64")
+                    config_lines.append(f"ipv6 address {ipv6_subnet}:{router_id}{neighbor_id}::{router_id}/{ipv6_mask}")
                 elif neighbor_id<router_id :  
                     set_networks_as.add(f"{neighbor_id}{router_id}")
-                    config_lines.append(f"ipv6 address {ipv6_prefix}{neighbor_id}{router_id}::{router_id}/64")
+                    config_lines.append(f"ipv6 address {ipv6_subnet}:{neighbor_id}{router_id}::{router_id}/{ipv6_mask}")
             else : 
                 router_br = True
                 set_remote_as.add(neighbor_as_number)
+                common_subnet = neighbor_elem.attrib["common_subnet"]
+                common_subnet_tab = common_subnet.split("/")
+                config_lines.append(f"ipv6 address {common_subnet_tab[0]}{as_number}/{common_subnet_tab[1]}")
                 router_e_bgp_as = neighbor_as_number
+                remote_subnet = neighbor_elem.attrib["remote_subnet"]
+                remote_subnet_tab = remote_subnet.split("/")
+                remote_subnet_tab = remote_subnet_tab[0].split("::")
 
-#*******************************PAS CLAIR
-                if int(router_id) == 6 :  
-                    config_lines.append(f"ipv6 address 2003:192:168::{as_number}/64")
-                elif int(router_id) == 7 :  
-                    config_lines.append(f"ipv6 address 2004:192:168::{as_number}/64")
                     
             config_lines.append(f"ipv6 enable")
             if rip_enable == True :
@@ -121,48 +119,33 @@ for as_elem in root.findall("as"):
                 if(i==router_id) : 
                     continue
                 else : 
-                    config_lines.append(f"neighbor 200{as_number}:192:168::{i} remote-as {as_number}")
-                    config_lines.append(f"neighbor 200{as_number}:192:168::{i} update-source Loopback0")
+                    config_lines.append(f"neighbor {ipv6_subnet}::{i} remote-as {as_number}")
+                    config_lines.append(f"neighbor {ipv6_subnet}::{i} update-source Loopback0")
 
             if router_br==True : 
-                config_lines.append(f"neighbor 200{router_e_bgp_as}:192:168::{router_id} remote-as {router_e_bgp_as}")
-                config_lines.append(f"neighbor 200{router_e_bgp_as}:192:168::{router_id} ebgp-multihop 2")
-                config_lines.append(f"neighbor 200{router_e_bgp_as}:192:168::{router_id} update-source Loopback0")
+                config_lines.append(f"neighbor {remote_subnet_tab[0]}::{router_id} remote-as {router_e_bgp_as}")
+                config_lines.append(f"neighbor {remote_subnet_tab[0]}::{router_id} ebgp-multihop 2")
+                config_lines.append(f"neighbor {remote_subnet_tab[0]}::{router_id} update-source Loopback0")
 
 #*******************************************************************bgp address family***********************************************************************************
             config_lines.append(f"!\naddress-family ipv4\nexit-address-family\n!")
             config_lines.append(f"address-family ipv6")
             if router_br==True : 
                 for i in set_networks_as : 
-                    config_lines.append(f"network 200{as_number}:192:168:{i}::/64")
-
-#***********************************A REFAIRE PROPRE
-                if int(as_number) == 1 : 
-                    #config_lines.append(f"network 2002:192:168::/48")
-                    config_lines.append(f"network 2002:192:168::{router_id}/128")
-                elif int(as_number) == 2 : 
-                    #config_lines.append(f"network 2001:192:168::/48")
-                    config_lines.append(f"network 2001:192:168::{router_id}/128")
-
-                if {as_number} ==1 :
-                    config_lines.append(f"network 2002:192:168::{router_id}/128")
-                elif {as_number} ==2 :
-                    config_lines.append(f"network 2001:192:168::{router_id}/128")
+                    config_lines.append(f"network {ipv6_subnet}:{i}::/64")
+                config_lines.append(f"network {remote_subnet_tab[0]}::{router_id}/128")
             
             
             for i in range(1,how_many_routers+1) :
                 if(i==router_id) : 
                     continue
                 else : 
-                    config_lines.append(f"neighbor 200{as_number}:192:168::{i} activate")
+                    config_lines.append(f"neighbor {ipv6_subnet}::{i} activate")
 
             if router_br == True : 
                 print(router_id)
             if router_br == True : 
-                if as_number ==1 :
-                    config_lines.append(f"neighbor 2002:192:168::{router_id} activate")
-                elif as_number ==2 :
-                    config_lines.append(f"neighbor 2001:192:168::{router_id} activate")
+                config_lines.append(f"neighbor {remote_subnet_tab[0]}::{router_id} activate")
             config_lines.append("exit-address-family\n!")
 
 
